@@ -1359,6 +1359,29 @@ namespace Bitbucket.Net
                 .ConfigureAwait(false);
         }
 
+        public async Task<IEnumerable<CommentRef>> GetPullRequestBlockerCommentsAsync(string projectKey, string repositorySlug, long pullRequestId,
+            int? maxPages = null,
+            int? limit = null,
+            int? start = null,
+            int? count = null,
+            string state = null)
+        {
+            var queryParamValues = new Dictionary<string, object>
+            {
+                ["limit"] = limit,
+                ["start"] = start,
+                ["count"] = count,
+                ["state"] = state
+            };
+
+            return await GetPagedResultsAsync(maxPages, queryParamValues, async qpv =>
+                    await GetProjectsReposUrl(projectKey, repositorySlug, $"/pull-requests/{pullRequestId}/blocker-comments")
+                        .SetQueryParams(qpv)
+                        .GetJsonAsync<PagedResults<CommentRef>>()
+                        .ConfigureAwait(false))
+                .ConfigureAwait(false);
+        }
+
         public async Task<CommentRef> UpdatePullRequestCommentAsync(string projectKey, string repositorySlug, long pullRequestId, long commentId,
             int version, string text)
         {
@@ -1417,6 +1440,29 @@ namespace Bitbucket.Net
             var response = await GetProjectsReposUrl(projectKey, repositorySlug)
                 .AppendPathSegment($"/pull-requests/{pullRequestId}/blocker-comments")
                 .PostJsonAsync(data)
+                .ConfigureAwait(false);
+
+            return await HandleResponseAsync<CommentRef>(response).ConfigureAwait(false);
+        }
+
+        public async Task<CommentRef> UpdatePullRequestBlockerCommentAsync(string projectKey, string repositorySlug, long pullRequestId, long commentId,
+            string version,
+            string text = null,
+            string severity = null,
+            string state = null)
+        {
+            var data = new
+            {
+                version,
+                text,
+                severity,
+                state
+            };
+
+            var response = await GetProjectsReposUrl(projectKey, repositorySlug)
+                .AppendPathSegment($"/pull-requests/{pullRequestId}/blocker-comments/{commentId}")
+                .SetQueryParam("version", version)
+                .PutJsonAsync(data)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<CommentRef>(response).ConfigureAwait(false);
